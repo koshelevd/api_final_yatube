@@ -38,17 +38,16 @@ class Post(models.Model):
         verbose_name='Изображение',
     )
 
+    class Meta():
+        """Adds meta-information."""
+        ordering = ('-pub_date',)
+        verbose_name_plural = 'Записи'
+        verbose_name = 'Запись'
+
     def __str__(self):
         """Return post's info."""
         return (f'pk={self.pk} by {self.author}, {self.pub_date}, '
                 f'text="{self.text[:50]}...", image="{self.image}"')
-
-    class Meta():
-        """Adds meta-information."""
-
-        ordering = ('-pub_date',)
-        verbose_name_plural = 'Записи'
-        verbose_name = 'Запись'
 
 
 class Comment(models.Model):
@@ -78,17 +77,16 @@ class Comment(models.Model):
         verbose_name='Дата добавления',
     )
 
+    class Meta():
+        """Adds meta-information."""
+        ordering = ('-created',)
+        verbose_name_plural = 'Комментарии'
+        verbose_name = 'Комментарий'
+
     def __str__(self):
         """Return comments's info."""
         return (f'Comment by {self.author}, {self.created}, '
                 f'text="{self.text[:50]}..."')
-
-    class Meta():
-        """Adds meta-information."""
-
-        ordering = ('-created',)
-        verbose_name_plural = 'Комментарии'
-        verbose_name = 'Комментарий'
 
 
 class Group(models.Model):
@@ -113,15 +111,15 @@ class Group(models.Model):
         verbose_name='Описание',
     )
 
-    def __str__(self):
-        """Return overrided title of the group."""
-        return self.title
-
     class Meta():
         """Adds meta-information."""
 
         verbose_name_plural = 'Сообщества'
         verbose_name = 'Сообщество'
+
+    def __str__(self):
+        """Return overrided title of the group."""
+        return self.title
 
 
 class Follow(models.Model):
@@ -145,14 +143,16 @@ class Follow(models.Model):
         verbose_name='Автор',
     )
 
+    class Meta():
+        """Adds meta-information."""
+        verbose_name_plural = 'Подписчики'
+        verbose_name = 'Подписчик'
+        constraints = [
+            models.UniqueConstraint(fields=('user', 'following'),
+                                    name='unique_follow_link'),
+        ]
+
     def __str__(self):
         """Return followers's info."""
         return (f'Follow "{self.following}", '
                 f'follower="{self.user}"')
-
-    class Meta():
-        """Adds meta-information."""
-
-        unique_together = ('following', 'user',)
-        verbose_name_plural = 'Подписчики'
-        verbose_name = 'Подписчик'

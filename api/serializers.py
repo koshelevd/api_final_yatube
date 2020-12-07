@@ -1,5 +1,6 @@
 """Serializers of the 'api' app."""
 from rest_framework import serializers
+from rest_framework.validators import UniqueTogetherValidator
 
 from api.models import Comment, Follow, Group, Post, User
 
@@ -14,7 +15,10 @@ class PostSerializer(serializers.ModelSerializer):
     class Meta:
         """Adds meta-information."""
 
-        fields = ('id', 'text', 'author', 'pub_date')
+        # здесь не можем воспользоваться fields = '__all__', так как
+        # в документации Redoc явно указаны поля, которые необходимо
+        # вернуть, поля 'group' и 'image' в ответ не включаются.
+        exclude = ('group', 'image')
         model = Post
 
 
@@ -56,6 +60,18 @@ class FollowSerializer(serializers.ModelSerializer):
     following = serializers.SlugRelatedField(slug_field='username',
                                              queryset=User.objects.all())
 
+    class Meta:
+        """Adds meta-information."""
+        fields = '__all__'
+        model = Follow
+        validators = [
+            UniqueTogetherValidator(
+                queryset=Follow.objects.all(),
+                fields=['user', 'following'],
+                message='User already follows this author'
+            )
+        ]
+
     def validate_following(self, value):
         """
         Validate if 'following' field is not empty or not equals to current
@@ -66,8 +82,3 @@ class FollowSerializer(serializers.ModelSerializer):
         if value == self.context['request'].user:
             raise serializers.ValidationError('Can not follow yourself')
         return value
-
-    class Meta:
-        """Adds meta-information."""
-        fields = ('user', 'following')
-        model = Follow

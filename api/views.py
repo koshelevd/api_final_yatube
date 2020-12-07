@@ -1,6 +1,8 @@
 """View classes of the 'api' app."""
 from django.shortcuts import get_object_or_404
-from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework import viewsets, mixins
+from rest_framework.filters import SearchFilter
 
 from .models import Post, Group, Follow, User
 from .serializers import (PostSerializer,
@@ -8,18 +10,26 @@ from .serializers import (PostSerializer,
                           GroupSerializer,
                           FollowSerializer, )
 from .permissions import ResourcePermission, IsAuthenticated
-from .filters import FilterPostsByGroupBackend, FilterFollowersBackend
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class CreateAndListViewSet(mixins.CreateModelMixin,
+                           mixins.ListModelMixin,
+                           viewsets.GenericViewSet):
+    pass
+
+
+class FollowViewSet(CreateAndListViewSet):
     """
     Viewset for 'models.Follow' model.
     """
 
-    queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     permission_classes = (ResourcePermission, IsAuthenticated)
-    filter_backends = [FilterFollowersBackend]
+    filter_backends = (SearchFilter,)
+    search_fields = ('=user__username',)
+
+    def get_queryset(self):
+        return Follow.objects.filter(following=self.request.user)
 
     def perform_create(self, serializer):
         """
@@ -27,13 +37,12 @@ class FollowViewSet(viewsets.ModelViewSet):
 
         Validate data then save user and following.
         """
-        if serializer.is_valid(raise_exception=True):
-            following_username = serializer.validated_data['following']
-            following = get_object_or_404(User, username=following_username)
-            serializer.save(user=self.request.user, following=following)
+        following_username = serializer.validated_data['following']
+        following = get_object_or_404(User, username=following_username)
+        serializer.save(user=self.request.user, following=following)
 
 
-class GroupViewSet(viewsets.ModelViewSet):
+class GroupViewSet(CreateAndListViewSet):
     """
     Viewset for 'models.Group' model.
     """
@@ -51,7 +60,8 @@ class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     permission_classes = (ResourcePermission,)
-    filter_backends = [FilterPostsByGroupBackend]
+    filter_backends = (DjangoFilterBackend,)
+    filterset_fields = ('group',)
 
     def perform_create(self, serializer):
         """
